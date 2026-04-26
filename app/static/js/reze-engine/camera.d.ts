@@ -1,0 +1,50 @@
+import { Mat4, Vec3 } from "./math";
+export declare class Camera {
+    alpha: number;
+    beta: number;
+    radius: number;
+    target: Vec3;
+    fov: number;
+    aspect: number;
+    near: number;
+    far: number;
+    private canvas;
+    private inputLocked;
+    private isDragging;
+    private mouseButton;
+    private lastMousePos;
+    private lastTouchPos;
+    private touchIdentifier;
+    private isPinching;
+    private lastPinchDistance;
+    private lastPinchMidpoint;
+    private initialPinchDistance;
+    angularSensitivity: number;
+    panSensitivity: number;
+    wheelPrecision: number;
+    pinchPrecision: number;
+    minZ: number;
+    maxZ: number;
+    lowerBetaLimit: number;
+    upperBetaLimit: number;
+    constructor(alpha: number, beta: number, radius: number, target: Vec3, fov?: number);
+    getPosition(): Vec3;
+    getViewMatrix(): Mat4;
+    private getCameraVectors;
+    private panCamera;
+    /** Far plane grows with zoom-out so big floors / distant geometry stay visible */
+    private updateFarFromRadius;
+    getProjectionMatrix(): Mat4;
+    attachControl(canvas: HTMLCanvasElement): void;
+    detachControl(): void;
+    setInputLocked(locked: boolean): void;
+    private onMouseDown;
+    private onMouseMove;
+    private onMouseUp;
+    private onWheel;
+    private onContextMenu;
+    private onTouchStart;
+    private onTouchMove;
+    private onTouchEnd;
+}
+//# sourceMappingURL=camera.d.ts.map

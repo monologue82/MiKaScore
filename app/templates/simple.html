@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>MiKaScore Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; }
+        canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+        #controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; gap: 10px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; background: #000; z-index: 200; }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading...</div>
+    <canvas id="canvas"></canvas>
+    <div id="controls">
+        <button id="playBtn">Play</button>
+        <button id="pauseBtn">Pause</button>
+    </div>
+    <script type="module">
+        let engine, model, audio;
+        let isPlaying = false;
+
+        async function init() {
+            const canvas = document.getElementById('canvas');
+            const { Engine, Vec3 } = await import('/static/js/reze-engine.bundle.js');
+            
+            engine = new Engine(canvas, {
+                camera: { distance: 31.5, target: new Vec3(0, 11.5, 0) },
+                bloom: { color: new Vec3(0.9, 0.3, 0.6) }
+            });
+            
+            await engine.init();
+            
+            model = await engine.loadModel('serqet', '/mmd/models/塞尔凯特/塞尔凯特.pmx');
+            
+            engine.setMaterialPresets('serqet', {
+                eye: ['眼睛', '眼白', '目白', '右瞳', '左瞳', '眉毛'],
+                face: ['脸', 'face01'],
+                body: ['皮肤', 'skin'],
+                hair: ['头发', 'hair_f'],
+                cloth_smooth: [
+                    '衣服', '裙子', '裙带', '裙布', '外套', '外套饰',
+                    '裤子', '裤子0', '腿环', '发饰', '鞋子', '鞋子饰',
+                    'shirt', 'shoes', 'shorts', 'trigger', 'dress', 'hair_accessory', 'cloth01_shoes'
+                ],
+                stockings: ['袜子', 'stockings'],
+                metal: ['metal01', 'earring']
+            });
+            
+            engine.addGround({ diffuseColor: new Vec3(1, 0.3, 0.6) });
+            
+            await model.loadVmd('dance', '/mmd/motion/One_More_Last_Time/One More Last Time.vmd');
+            
+            engine.runRenderLoop();
+            
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            
+            model.show('dance');
+            
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            
+            engine.resetPhysics();
+            
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function play() {
+            if (!model) return;
+            
+            const prog = model.getAnimationProgress();
+            console.log('Animation progress before play:', prog);
+            
+            if (prog.paused) {
+                model.play();
+            } else if (!prog.playing) {
+                const atEnd = prog.duration > 0 && prog.current >= prog.duration - 1e-3;
+                if (atEnd) {
+                    model.seek(0);
+                }
+                model.play('dance');
+            }
+            
+            if (!audio) {
+                audio = new Audio('/mmd/motion/One_More_Last_Time/One More Last Time.wav');
+                audio.volume = 1.0;
+            }
+            audio.currentTime = model.getAnimationProgress().current;
+            audio.play();
+            
+            isPlaying = true;
+        }
+
+        function pause() {
+            if (!model) return;
+            model.pause();
+            if (audio) audio.pause();
+            isPlaying = false;
+        }
+
+        document.getElementById('playBtn').onclick = play;
+        document.getElementById('pauseBtn').onclick = pause;
+        
+        init().catch(console.error);
+    </script>
+</body>
+</html>

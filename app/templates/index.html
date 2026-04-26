@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiKaScore</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Loading Page */
+        #loadingPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        #loadingPage.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-logo {
+            font-size: 4rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #4ade80, #38bdf8, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .loading-bar {
+            width: 300px;
+            height: 4px;
+            background: rgba(30, 41, 59, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #38bdf8);
+            width: 0%;
+            animation: loading 2s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+
+        .loading-text {
+            margin-top: 1rem;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* Main Page */
+        #mainPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            z-index: 100;
+        }
+
+        .header-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #4ade80, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .reze-engine-logo {
+            position: fixed;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 900;
+            letter-spacing: 0.15em;
+            color: #1e293b;
+            z-index: 1000;
+            user-select: none;
+        }
+
+        .reze-engine-logo span {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #mmdCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        /* Controls */
+        .controls-container {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 9999px;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .control-button {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .control-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .time-display {
+            color: white;
+            font-family: monospace;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        .progress-container {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .progress-slider {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+
+        .progress-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Navigation Buttons */
+        .nav-container {
+            position: absolute;
+            right: 2rem;
+            bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .nav-button {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, #4ade80, #38bdf8);
+            color: white;
+        }
+
+        .nav-button.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        /* Official Motion Dropdown */
+        .official-dropdown {
+            position: fixed;
+            top: 5.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            padding: 0.5rem;
+            z-index: 2000;
+            min-width: 280px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .official-dropdown.show {
+            display: block;
+        }
+
+        .official-dropdown-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .official-dropdown-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .official-dropdown-item.selected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .official-dropdown-item-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .official-dropdown-item-audio {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        .official-dropdown-item.selected .official-dropdown-item-audio {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Motion Selection Page */
+        #motionPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            display: none;
+            flex-direction: column;
+        }
+
+        .motion-header {
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .back-button {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .back-button:hover {
+            background: rgba(30, 41, 59, 0.05);
+        }
+
+        .filter-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .filter-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .filter-button.active {
+            background: linear-gradient(135deg, #764ba2, #667eea);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .motion-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .motion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .motion-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid transparent;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .motion-card:hover {
+            border-color: #4ade80;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .motion-card.selected {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.1);
+        }
+
+        .motion-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .motion-info {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+
+        .dance-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, #4ade80, #38bdf8);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 9999px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .dance-button.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .dance-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Player Page */
+        #playerPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+        }
+
+        .player-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .mmd-viewport {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .camera-viewport {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 360px;
+            height: 202.5px;
+            border: 2px solid #4ade80;
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.8);
+            transition: all 0.5s ease-in-out;
+        }
+
+        .camera-viewport.maximized {
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            border: none;
+        }
+
+        .detection-guide {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 200;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .detection-guide.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #cameraCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+        
+        #playerMmdCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .player-controls {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .player-button {
+            background: rgba(74, 222, 128, 0.9);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .player-button:hover {
+            background: rgba(74, 222, 128, 1);
+            transform: scale(1.05);
+        }
+
+        .player-button.exit {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        .player-button.exit:hover {
+            background: rgba(239, 68, 68, 1);
+        }
+
+        /* Top Right Controls */
+        .top-right-controls {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 150;
+        }
+
+        /* Score Display */
+        .score-display {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.75rem 2rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .score-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #4ade80, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .rating-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            font-weight: bold;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .rating-display.show {
+            opacity: 1;
+            animation: ratingPop 0.5s ease;
+        }
+
+        @keyframes ratingPop {
+            0% { transform: translate(-50%, -50%) scale(0.5); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .rating-display.perfect {
+            color: #fbbf24;
+        }
+
+        .rating-display.great {
+            color: #4ade80;
+        }
+
+        .rating-display.good {
+            color: #38bdf8;
+        }
+
+        .rating-display.bad {
+            color: #f472b6;
+        }
+
+        .rating-display.miss {
+            color: #ef4444;
+        }
+
+        .combo-display {
+            position: fixed;
+            top: 5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #f59e0b;
+            text-shadow: 0 2px 8px rgba(245, 158, 11, 0.5);
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .combo-display.visible {
+            opacity: 1;
+            animation: comboPulse 0.3s ease;
+        }
+
+        @keyframes comboPulse {
+            0% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.2); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+
+        .bpm-display {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            z-index: 200;
+        }
+
+        /* Countdown Overlay */
+        #countdownOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        #countdownNumber {
+            font-size: 10rem;
+            font-weight: bold;
+            color: #4ade80;
+            animation: countdownPulse 1s ease-in-out infinite;
+            display: none;
+        }
+
+        @keyframes countdownPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        /* Settings Panel */
+        #settingsPanel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            transition: right 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        #settingsPanel.show {
+            right: 0;
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .settings-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .settings-close {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .setting-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .setting-slider {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e2e8f0;
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .setting-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4ade80, #38bdf8);
+            cursor: pointer;
+        }
+
+        .setting-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4ade80, #38bdf8);
+            cursor: pointer;
+            border: none;
+        }
+
+        .setting-select {
+            width: calc(100% - 100px);
+            padding: 0.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            background: white;
+            cursor: pointer;
+            margin-right: 0.5rem;
+        }
+
+        .setting-select:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+
+        .setting-button {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #4ade80, #38bdf8);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .setting-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(248, 250, 252, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(74, 222, 128, 0.2);
+            border-top-color: #4ade80;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Page -->
+    <div id="loadingPage">
+        <div class="loading-logo">MiKaScore</div>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+        <div class="loading-text">正在加载系统组件...</div>
+    </div>
+
+    <!-- Main Page -->
+    <div id="mainPage" class="hidden">
+        <div class="reze-engine-logo"><span>REZE</span> ENGINE</div>
+        <div class="main-header">
+            <div class="header-logo">MiKaScore</div>
+        </div>
+        
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="mmdCanvas"></canvas>
+                
+                <!-- Loading Overlay -->
+                <div id="modelLoadingOverlay" class="loading-overlay">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <!-- Playback Controls -->
+                <div id="playbackControls" class="controls-container" style="display: none;">
+                    <button id="playPauseBtn" class="control-button">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </button>
+                    
+                    <span id="currentTime" class="time-display">0:00</span>
+                    
+                    <div class="progress-container">
+                        <input type="range" id="progressSlider" class="progress-slider" min="0" max="100" step="0.001" value="0">
+                    </div>
+                    
+                    <span id="remainingTime" class="time-display">-0:00</span>
+                </div>
+            </div>
+            
+            <div class="nav-container">
+                <button class="nav-button" onclick="showPage('motionPage')">选择舞蹈</button>
+                <button class="nav-button" id="mainOfficialToggle" onclick="toggleMainOfficialMotion()">官方示例</button>
+                <button class="nav-button" onclick="showMotionUploadDialog()">上传动作</button>
+                <button class="nav-button" onclick="showModelUploadDialog()">上传模型</button>
+                <button class="nav-button" onclick="toggleSettings()">设置</button>
+            </div>
+        </div>
+        
+        <div class="official-dropdown" id="officialDropdown"></div>
+    </div>
+
+    <!-- Motion Selection Page -->
+    <div id="motionPage">
+        <div class="motion-header">
+            <button class="back-button" onclick="showPage('mainPage')">← 返回</button>
+            <h1 class="motion-title">选择舞蹈</h1>
+            <div style="width: 80px;"></div>
+        </div>
+        
+        <div class="motion-grid" id="motionGrid">
+        </div>
+        
+        <button class="dance-button" id="danceButton" onclick="startDance()">Dance !</button>
+    </div>
+
+    <!-- Player Page -->
+        <div id="playerPage">
+            <div class="player-content">
+                <div class="mmd-viewport">
+                    <canvas id="playerMmdCanvas"></canvas>
+                    <div id="countdownOverlay">
+                        <div id="countdownNumber">3</div>
+                    </div>
+                    <div class="rating-display" id="ratingDisplay"></div>
+                </div>
+                
+                <div class="detection-guide" id="detectionGuide">
+                    请站在摄像头前
+                </div>
+                
+                <div class="camera-viewport" id="cameraViewport">
+                    <canvas id="cameraCanvas"></canvas>
+                    <div class="score-display">
+                        <div class="score-label">总分</div>
+                        <div class="score-value" id="scoreValue">0</div>
+                    </div>
+                    <div class="combo-display" id="comboDisplay"></div>
+                    <div class="bpm-display" id="bpmDisplay">BPM: 120</div>
+                </div>
+            </div>
+        
+        <!-- Playback Controls -->
+        <div id="playerPlaybackControls" class="controls-container" style="display: flex;">
+            <button id="playerPlayPauseBtn" class="control-button" onclick="togglePlayPause()">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+            
+            <span id="playerCurrentTime" class="time-display">0:00</span>
+            
+            <div class="progress-container">
+                <input type="range" id="playerProgressSlider" class="progress-slider" min="0" max="100" step="0.001" value="0">
+            </div>
+            
+            <span id="playerRemainingTime" class="time-display">-0:00</span>
+        </div>
+        
+        <!-- Top Right Controls -->
+        <div class="top-right-controls">
+            <button class="player-button" onclick="resetPhysics()">重置物理</button>
+            <button class="player-button exit" onclick="stopAndReturn()">退出</button>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel">
+        <div class="settings-header">
+            <h2 class="settings-title">设置</h2>
+            <button class="settings-close" onclick="toggleSettings()">×</button>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">音乐音量</div>
+            <input type="range" class="setting-slider" min="0" max="100" value="100">
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">判定灵敏度</div>
+            <input type="range" class="setting-slider" min="50" max="150" value="100">
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">摄像头位置</div>
+            <input type="range" class="setting-slider" min="20" max="40" value="30">
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">选择模型</div>
+            <select id="modelSelect" class="setting-select" onchange="onModelChange()">
+                <option value="塞尔凯特">塞尔凯特</option>
+            </select>
+            <button class="setting-button" onclick="document.getElementById('modelUpload').click()">上传模型</button>
+            <input type="file" id="modelUpload" style="display: none;" accept=".zip,.pmx" onchange="handleModelUpload(event)">
+        </div>
+    </div>
+
+    <input type="file" id="motionFileInput" style="display: none;" multiple accept=".vmd,.wav">
+    <input type="file" id="modelFileInput" style="display: none;" accept=".zip,.pmx">
+
+    <script type="module">
+        // State
+        const state = {
+            currentPage: 'loadingPage',
+            selectedMotion: null,
+            engine: null,
+            model: null,
+            audio: null,
+            isPlaying: false,
+            isPaused: false,
+            score: 0,
+            camera: null,
+            pose: null,
+            video: null,
+            animationId: null,
+            stream: null,
+            seekResetRafRef: null,
+            personDetected: false,
+            waitingForPerson: false,
+            boneBindingComplete: false,
+            boneBindingFrames: 0,
+            lastPoseResults: null,
+            smoothedLandmarks: null,
+            smoothingFactor: 0.7,
+            detectedBPM: 120,
+            combo: 0,
+            maxCombo: 0,
+            streak: 0,
+            difficulty: 1.0,
+            lastRating: null
+        };
+
+        // Format time
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatRemainingTime(current, duration) {
+            const remaining = duration - current;
+            if (remaining <= 0) return '0:00';
+            const mins = Math.floor(remaining / 60);
+            const secs = Math.floor(remaining % 60);
+            return `-${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Add transition overlay element
+        const transitionOverlay = document.createElement('div');
+        transitionOverlay.id = 'transitionOverlay';
+        transitionOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+            overflow: hidden;
+        `;
+        
+        // Add bubbles container
+        const bubblesContainer = document.createElement('div');
+        bubblesContainer.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        `;
+        transitionOverlay.appendChild(bubblesContainer);
+        
+        // Create bubbles
+        for (let i = 0; i < 20; i++) {
+            const bubble = document.createElement('div');
+            const size = Math.random() * 100 + 50; // 50-150px
+            const positionX = Math.random() * 100;
+            const positionY = Math.random() * 100;
+            const delay = Math.random() * 2;
+            const duration = Math.random() * 3 + 2; // 2-5s
+            
+            bubble.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                border-radius: 50%;
+                background: rgba(102, 126, 234, 0.3);
+                left: ${positionX}%;
+                top: ${positionY}%;
+                transform: scale(0);
+                animation: bubble ${duration}s ease-in-out ${delay}s infinite;
+            `;
+            bubblesContainer.appendChild(bubble);
+        }
+        
+        // Add bubble animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes bubble {
+                0% {
+                    transform: scale(0);
+                    opacity: 0.7;
+                }
+                50% {
+                    transform: scale(1);
+                    opacity: 0.3;
+                }
+                100% {
+                    transform: scale(0);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        document.body.appendChild(transitionOverlay);
+
+        // Page navigation with transition
+        function showPage(pageId) {
+            if (state.currentPage === 'playerPage' && pageId !== 'playerPage') {
+                if (state.audio) {
+                    state.audio.pause();
+                    state.audio = null;
+                }
+            }
+
+            // Show transition overlay
+            transitionOverlay.style.opacity = '1';
+            transitionOverlay.style.visibility = 'visible';
+            
+            // Wait for transition to complete
+            setTimeout(() => {
+                const pages = ['loadingPage', 'mainPage', 'motionPage', 'playerPage'];
+                pages.forEach(page => {
+                    const el = document.getElementById(page);
+                    if (page === pageId) {
+                        el.classList.remove('hidden');
+                        el.style.display = page === 'mainPage' || page === 'motionPage' || page === 'playerPage' ? 
+                            (page === 'motionPage' || page === 'playerPage' ? 'flex' : 'block') : 
+                            'flex';
+                    } else {
+                        el.classList.add('hidden');
+                        el.style.display = 'none';
+                    }
+                });
+                state.currentPage = pageId;
+
+                if (pageId === 'playerPage') {
+                    initPlayerPage();
+                }
+                
+                // Hide transition overlay
+                setTimeout(() => {
+                    transitionOverlay.style.opacity = '0';
+                    transitionOverlay.style.visibility = 'hidden';
+                }, 200);
+            }, 400);
+        }
+
+        // Load motions
+        async function loadMotions() {
+            try {
+                const response = await fetch('/api/motions');
+                const motions = await response.json();
+                
+                const grid = document.getElementById('motionGrid');
+                grid.innerHTML = '';
+                
+                motions.forEach(motion => {
+                    const card = document.createElement('div');
+                    card.className = 'motion-card';
+                    card.setAttribute('data-motion', JSON.stringify(motion));
+                    
+                    // 创建选择框的 HTML
+                    let vmdOptions = '<option value="none">None</option>';
+                    if (motion.vmdFiles && motion.vmdFiles.length > 0) {
+                        motion.vmdFiles.forEach(vmdFile => {
+                            vmdOptions += `<option value="${vmdFile}">${vmdFile}</option>`;
+                        });
+                    }
+                    
+                    card.innerHTML = `
+                        <div class="motion-name">${motion.name}</div>
+                        <div class="motion-info">动作: ${motion.vmdCount} 个文件</div>
+                        <div class="motion-info">音频: ${motion.hasAudio ? motion.audioName : '无'}</div>
+                        <div style="margin-top: 1rem;">
+                            <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.5rem;">Body 动作:</div>
+                            <select class="vmd-select" data-type="body" style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem;">
+                                ${vmdOptions}
+                            </select>
+                        </div>
+                        <div style="margin-top: 0.75rem;">
+                            <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.5rem;">Face 动作:</div>
+                            <select class="vmd-select" data-type="face" style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem;">
+                                ${vmdOptions}
+                            </select>
+                        </div>
+                    `;
+                    
+                    card.onclick = () => selectMotion(motion, card);
+                    grid.appendChild(card);
+                });
+                
+                // Restore saved selection after loading motions
+                restoreSavedSelection();
+            } catch (error) {
+                console.error('Failed to load motions:', error);
+            }
+        }
+
+        let selectedOfficialIndex = -1;
+
+        const OFFICIAL_MOTIONS = [
+            { name: 'IRIS OUT', animation: 'IRIS OUT.vmd', audio: 'IRIS OUT.wav' },
+            { name: 'One More Last Time', animation: 'One More Last Time.vmd', audio: 'One More Last Time.wav' },
+            { name: 'Push Up', animation: 'Push Up.vmd', audio: 'in the pool.mp3' },
+            { name: 'Boom', animation: 'boom.vmd', audio: 'boom.m4a' },
+            { name: 'M1', animation: 'm1.vmd', audio: null },
+            { name: 'M2', animation: 'm2.vmd', audio: null },
+            { name: 'Miku', animation: 'miku.vmd', audio: null },
+            { name: 'Pool', animation: 'pool.vmd', audio: 'in the pool.mp3' },
+            { name: 'Run', animation: 'run.vmd', audio: null }
+        ];
+
+        function toggleMainOfficialMotion() {
+            const toggle = document.getElementById('mainOfficialToggle');
+            const dropdown = document.getElementById('officialDropdown');
+            const isOpen = dropdown.classList.contains('show');
+
+            if (!isOpen) {
+                toggle.classList.add('active');
+                renderOfficialDropdown();
+                dropdown.classList.add('show');
+            } else {
+                toggle.classList.remove('active');
+                dropdown.classList.remove('show');
+            }
+        }
+
+        function renderOfficialDropdown() {
+            const dropdown = document.getElementById('officialDropdown');
+            dropdown.innerHTML = OFFICIAL_MOTIONS.map((motion, index) => `
+                <div class="official-dropdown-item ${index === selectedOfficialIndex ? 'selected' : ''}"
+                     onclick="selectOfficialMotion(${index})">
+                    <div>
+                        <div class="official-dropdown-item-name">${motion.name}</div>
+                        <div class="official-dropdown-item-audio">${motion.audio || '无音频'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function selectOfficialMotion(index) {
+            selectedOfficialIndex = index;
+            const motion = OFFICIAL_MOTIONS[index];
+            const toggle = document.getElementById('mainOfficialToggle');
+            const dropdown = document.getElementById('officialDropdown');
+
+            toggle.textContent = motion.name;
+            toggle.classList.add('active');
+            dropdown.classList.remove('show');
+
+            state.selectedMotion = {
+                name: motion.name,
+                folder: 'official',
+                hasAudio: !!motion.audio,
+                audioName: motion.audio,
+                vmdCount: 1,
+                vmdFiles: [motion.animation]
+            };
+
+            if (state.model) {
+                await state.model.loadVmd('dance', `/animations/${motion.animation}`);
+                
+                // Setup new audio
+                if (state.audio) {
+                    state.audio.pause();
+                    state.audio = null;
+                }
+                
+                if (motion.audio) {
+                    const audio = new Audio(`/audios/${motion.audio}`);
+                    audio.preload = 'auto';
+                    audio.setAttribute('playsinline', 'true');
+                    audio.setAttribute('webkit-playsinline', 'true');
+                    audio.volume = 1.0;
+                    audio.muted = false;
+                    
+                    Object.assign(audio.style, {
+                        display: 'none',
+                        position: 'absolute',
+                        visibility: 'hidden',
+                        width: '0',
+                        height: '0'
+                    });
+                    document.body.appendChild(audio);
+                    
+                    audio.load();
+                    
+                    audio.addEventListener('loadeddata', () => {
+                        state.audio = audio;
+                        if (state.isPlaying) {
+                            audio.play().catch(() => {});
+                        }
+                    });
+                    
+                    audio.addEventListener('ended', () => {
+                        state.isPlaying = false;
+                        state.isPaused = false;
+                        updatePlayPauseButton();
+                    });
+                }
+                
+                // Always show and play the new animation
+                state.model.show('dance');
+                if (state.isPlaying) {
+                    state.model.play('dance');
+                }
+            }
+
+            renderOfficialDropdown();
+        }
+
+        function hideOfficialDropdown() {
+            const dropdown = document.getElementById('officialDropdown');
+            const toggle = document.getElementById('mainOfficialToggle');
+            if (dropdown) dropdown.classList.remove('show');
+            if (toggle && selectedOfficialIndex === -1) {
+                toggle.classList.remove('active');
+                toggle.textContent = '官方示例';
+            }
+        }
+        
+        // Restore selection from localStorage when dance list is loaded
+        function restoreSavedSelection() {
+            try {
+                const savedSelection = localStorage.getItem('mikaScoreSelectedMotion');
+                if (savedSelection) {
+                    const saved = JSON.parse(savedSelection);
+                    console.log('Restoring saved selection:', saved);
+                    
+                    // Find the motion card with the saved folder
+                    const motionCards = document.querySelectorAll('.motion-card');
+                    motionCards.forEach(card => {
+                        const motionData = JSON.parse(card.getAttribute('data-motion'));
+                        if (motionData.folder === saved.folder) {
+                            // Select this card
+                            selectMotion(saved, card);
+                            
+                            // Set the body and face select values
+                            const bodySelect = card.querySelector('[data-type="body"]');
+                            const faceSelect = card.querySelector('[data-type="face"]');
+                            
+                            if (bodySelect) {
+                                bodySelect.value = saved.selectedBody || 'none';
+                            }
+                            if (faceSelect) {
+                                faceSelect.value = saved.selectedFace || 'none';
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to restore saved selection:', e);
+            }
+        }
+
+        function selectMotion(motion, card) {
+            const dropdown = document.getElementById('officialDropdown');
+            const toggle = document.getElementById('mainOfficialToggle');
+            
+            if (dropdown && dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+                selectedOfficialIndex = -1;
+                toggle.classList.remove('active');
+                toggle.textContent = '官方示例';
+            }
+            
+            document.querySelectorAll('.motion-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            // 获取用户选择的 body 和 face 动作
+            const bodySelect = card.querySelector('[data-type="body"]');
+            const faceSelect = card.querySelector('[data-type="face"]');
+            
+            const selectedMotion = {
+                ...motion,
+                selectedBody: bodySelect ? bodySelect.value : 'none',
+                selectedFace: faceSelect ? faceSelect.value : 'none'
+            };
+            
+            state.selectedMotion = selectedMotion;
+            
+            // Save selection to localStorage
+            try {
+                localStorage.setItem('mikaScoreSelectedMotion', JSON.stringify(selectedMotion));
+                console.log('Selection saved to localStorage:', selectedMotion);
+            } catch (e) {
+                console.warn('Failed to save selection to localStorage:', e);
+            }
+            
+            document.getElementById('danceButton').classList.add('active');
+        }
+
+        // Initialize Reze Engine
+        async function initRezeEngine() {
+            const canvas = document.getElementById('mmdCanvas');
+            
+            try {
+                // Load Reze Engine
+                const { Engine, Vec3 } = await import('/static/js/reze-engine.bundle.js');
+                
+                console.log('Initializing Reze Engine...');
+                
+                // Check WebGPU support
+                if (!navigator.gpu) {
+                    throw new Error('您的浏览器不支持 WebGPU。请使用 Chrome 113+、Edge 113+ 或 Safari 17+ 浏览器，并确保在浏览器设置中启用了 WebGPU 功能（chrome://flags 或 edge://flags 中搜索 WebGPU）。');
+                }
+                
+                state.engine = new Engine(canvas, {
+                    camera: { distance: 31.5, target: new Vec3(0, 11.5, 0) },
+                    bloom: { color: new Vec3(0.9, 0.3, 0.6) }
+                });
+                
+                await state.engine.init();
+                
+                console.log('Loading model...');
+                const modelPath = getCurrentModelPath();
+                console.log('Using model path:', modelPath);
+                state.model = await state.engine.loadModel('serqet', modelPath);
+                
+                // Set material presets
+                state.engine.setMaterialPresets('serqet', {
+                    eye: ['眼睛', '眼白', '目白', '右瞳', '左瞳', '眉毛'],
+                    face: ['脸', 'face01'],
+                    body: ['皮肤', 'skin'],
+                    hair: ['头发', 'hair_f'],
+                    cloth_smooth: [
+                        '衣服', '裙子', '裙带', '裙布', '外套', '外套饰',
+                        '裤子', '裤子0', '腿环', '发饰', '鞋子', '鞋子饰',
+                        'shirt', 'shoes', 'shorts', 'trigger', 'dress', 'hair_accessory', 'cloth01_shoes'
+                    ],
+                    stockings: ['袜子', 'stockings'],
+                    metal: ['metal01', 'earring']
+                });
+                
+                state.engine.addGround({
+                    diffuseColor: new Vec3(1, 0.3, 0.6)
+                });
+                
+                console.log('Loading VMD...');
+                await state.model.loadVmd('dance', '/mmd/motion/One_More_Last_Time/One More Last Time.vmd');
+                
+                state.engine.runRenderLoop();
+                
+                // Wait a frame
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+                
+                // Show animation
+                state.model.show('dance');
+                
+                // Wait another frame
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+                
+                // Reset physics
+                state.engine.resetPhysics();
+                
+                // Hide loading overlay
+                document.getElementById('modelLoadingOverlay').classList.add('hidden');
+                document.getElementById('playbackControls').style.display = 'flex';
+                
+                // Setup audio
+                setupAudio();
+                
+                // Check animation progress and update display
+                setTimeout(() => {
+                    const prog = state.model.getAnimationProgress();
+                    console.log('Animation progress after init:', prog);
+                    // Update time display
+                    document.getElementById('currentTime').textContent = formatTime(prog.current);
+                    document.getElementById('remainingTime').textContent = formatRemainingTime(prog.current, prog.duration);
+                    document.getElementById('progressSlider').value = prog.percentage;
+                    // Update play/pause button
+                    updatePlayPauseButton();
+                }, 1000);
+                
+                console.log('Reze Engine initialized successfully');
+                
+            } catch (error) {
+                console.error('Reze engine init failed:', error);
+                document.getElementById('modelLoadingOverlay').innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="color: #ef4444; font-size: 1rem; margin-bottom: 0.5rem;">加载模型失败</div>
+                        <div style="color: #64748b; font-size: 0.875rem;">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function setupAudio() {
+            const audio = new Audio('/mmd/motion/One_More_Last_Time/One More Last Time.wav');
+            audio.preload = 'auto';
+            audio.setAttribute('playsinline', 'true');
+            audio.setAttribute('webkit-playsinline', 'true');
+            audio.volume = 1.0;
+            audio.muted = false;
+            
+            Object.assign(audio.style, {
+                display: 'none',
+                position: 'absolute',
+                visibility: 'hidden',
+                width: '0',
+                height: '0'
+            });
+            document.body.appendChild(audio);
+            
+            audio.load();
+            
+            audio.addEventListener('loadeddata', () => {
+                state.audio = audio;
+            });
+            
+            audio.addEventListener('error', () => {
+                console.warn('Audio failed to load');
+            });
+            
+            audio.addEventListener('ended', () => {
+                state.isPlaying = false;
+                state.isPaused = false;
+                updatePlayPauseButton();
+            });
+        }
+
+        // Play/Pause handlers
+        function handlePlay() {
+            if (!state.engine || !state.model) return;
+            const prog = state.model.getAnimationProgress();
+            console.log('Playing animation, current state:', prog);
+            
+            // Always show the animation first
+            state.model.show('dance');
+            console.log('Animation shown');
+            
+            if (prog.paused) {
+                console.log('Resuming from paused state');
+                if (state.audio) {
+                    state.audio.muted = false;
+                    state.audio.volume = 1.0;
+                    state.audio.play().catch(() => {});
+                }
+                state.model.play('dance');
+                state.isPlaying = true;
+                state.isPaused = false;
+            } else if (prog.playing) {
+                console.log('Animation already playing, returning');
+                return;
+            } else {
+                console.log('Starting animation from scratch');
+                if (state.audio) {
+                    state.audio.muted = false;
+                    state.audio.volume = 1.0;
+                    const atEnd = prog.duration > 0 && prog.current >= prog.duration - 1e-3;
+                    state.audio.currentTime = atEnd ? 0 : prog.current;
+                    state.audio.play().catch(err => console.error('Audio play error:', err));
+                }
+                const atEnd = prog.duration > 0 && prog.current >= prog.duration - 1e-3;
+                if (atEnd) {
+                    console.log('Animation at end, seeking to 0');
+                    state.model.seek(0);
+                }
+                console.log('Calling model.play("dance")');
+                state.model.play('dance');
+                state.isPlaying = true;
+                state.isPaused = false;
+            }
+            
+            // Check state after play
+            setTimeout(() => {
+                const newProg = state.model.getAnimationProgress();
+                console.log('Animation state after play:', newProg);
+            }, 100);
+            
+            updatePlayPauseButton();
+            startProgressUpdates();
+        }
+
+        function handlePause() {
+            if (state.engine) {
+                state.model.pause();
+                if (state.audio) {
+                    state.audio.pause();
+                }
+                state.isPaused = true;
+                updatePlayPauseButton();
+            }
+        }
+
+        function handleResume() {
+            if (state.engine) {
+                if (state.audio) {
+                    state.audio.play().catch(() => {});
+                }
+                state.model.play();
+                state.isPaused = false;
+                updatePlayPauseButton();
+                startProgressUpdates();
+            }
+        }
+
+        function handleSeek(value) {
+            if (state.engine && state.model) {
+                const prog = state.model.getAnimationProgress();
+                if (prog.duration > 0) {
+                    const seekTime = (value / 100) * prog.duration;
+                    state.model.seek(seekTime);
+                    if (state.audio) {
+                        state.audio.currentTime = seekTime;
+                    }
+                    
+                    // Reset physics after seek
+                    if (state.seekResetRafRef !== null) {
+                        cancelAnimationFrame(state.seekResetRafRef);
+                    }
+                    state.seekResetRafRef = requestAnimationFrame(() => {
+                        state.seekResetRafRef = null;
+                        state.engine.resetPhysics();
+                    });
+                }
+            }
+        }
+
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('playPauseBtn');
+            if (!state.isPlaying) {
+                btn.innerHTML = `
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                `;
+                btn.onclick = handlePlay;
+            } else if (state.isPaused) {
+                btn.innerHTML = `
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                `;
+                btn.onclick = handleResume;
+            } else {
+                btn.innerHTML = `
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                `;
+                btn.onclick = handlePause;
+            }
+        }
+
+        function startProgressUpdates() {
+            let rafId = null;
+            
+            const updateProgress = () => {
+                if (state.model && state.isPlaying && !state.isPaused) {
+                    const prog = state.model.getAnimationProgress();
+                    document.getElementById('currentTime').textContent = formatTime(prog.current);
+                    document.getElementById('remainingTime').textContent = formatRemainingTime(prog.current, prog.duration);
+                    document.getElementById('progressSlider').value = prog.percentage;
+                    
+                    if (prog.playing) {
+                        rafId = requestAnimationFrame(updateProgress);
+                    }
+                }
+            };
+            
+            if (state.isPlaying && !state.isPaused) {
+                rafId = requestAnimationFrame(updateProgress);
+            }
+        }
+
+        // Progress slider
+        document.getElementById('progressSlider').addEventListener('input', (e) => {
+            handleSeek(parseFloat(e.target.value));
+        });
+        
+        // Player progress slider
+        document.getElementById('playerProgressSlider').addEventListener('input', (e) => {
+            handlePlayerSeek(parseFloat(e.target.value));
+        });
+
+        // Player page functions
+        async function startDance() {
+            if (!state.selectedMotion) return;
+            showPage('playerPage');
+        }
+
+        async function initPlayerPage() {
+            try {
+                await initCamera();
+                
+                // Re-initialize engine on player page
+                const canvas = document.getElementById('playerMmdCanvas');
+                const { Engine, Vec3 } = await import('/static/js/reze-engine.bundle.js');
+                
+                state.engine = new Engine(canvas, {
+                    camera: { distance: 31.5, target: new Vec3(0, 11.5, 0) },
+                    bloom: { color: new Vec3(0.9, 0.3, 0.6) }
+                });
+                
+                await state.engine.init();
+                
+                const modelPath = getCurrentModelPath();
+                console.log('Using model path:', modelPath);
+                state.model = await state.engine.loadModel('serqet', modelPath);
+                
+                state.engine.setMaterialPresets('serqet', {
+                    eye: ['眼睛', '眼白', '目白', '右瞳', '左瞳', '眉毛'],
+                    face: ['脸', 'face01'],
+                    body: ['皮肤', 'skin'],
+                    hair: ['头发', 'hair_f'],
+                    cloth_smooth: [
+                        '衣服', '裙子', '裙带', '裙布', '外套', '外套饰',
+                        '裤子', '裤子0', '腿环', '发饰', '鞋子', '鞋子饰',
+                        'shirt', 'shoes', 'shorts', 'trigger', 'dress', 'hair_accessory', 'cloth01_shoes'
+                    ],
+                    stockings: ['袜子', 'stockings'],
+                    metal: ['metal01', 'earring']
+                });
+                
+                state.engine.addGround({
+                    diffuseColor: new Vec3(1, 0.3, 0.6)
+                });
+                
+                // Load selected motion
+                if (state.selectedMotion && state.selectedMotion.folder) {
+                    const folder = state.selectedMotion.folder;
+                    const isOfficial = folder === 'official';
+                    
+                    // Load body motion
+                    const bodyMotion = state.selectedMotion.selectedBody;
+                    if (bodyMotion && bodyMotion !== 'none') {
+                        const bodyPath = isOfficial 
+                            ? `/animations/${bodyMotion}` 
+                            : `/mmd/motion/${folder}/${bodyMotion}`;
+                        await state.model.loadVmd('body', bodyPath);
+                    }
+                    
+                    // Load face motion and merge it with body animation
+                    const faceMotion = state.selectedMotion.selectedFace;
+                    if (faceMotion && faceMotion !== 'none') {
+                        // First load face motion as a separate clip
+                        const facePath = isOfficial
+                            ? `/animations/${faceMotion}`
+                            : `/mmd/motion/${folder}/${faceMotion}`;
+                        await state.model.loadVmd('face', facePath);
+                        
+                        // Now we need to merge the face animation into the body animation
+                        // This is because Reze Engine only supports one animation at a time
+                        // We'll create a new animation that combines both body and face animations
+                        try {
+                            // Get the body and face animation clips
+                            const bodyClip = state.model.getClip('body');
+                            const faceClip = state.model.getClip('face');
+                            
+                            if (bodyClip && faceClip) {
+                                // Create a new clip that combines both
+                                const mergedClip = {
+                                    boneTracks: bodyClip.boneTracks, // Use body animation for bones
+                                    morphTracks: faceClip.morphTracks, // Use face animation for morphs (expressions)
+                                    frameCount: Math.max(bodyClip.frameCount, faceClip.frameCount)
+                                };
+                                
+                                // Replace the body clip with the merged one
+                                state.model.loadClip('body', mergedClip);
+                                console.log('Successfully merged face animation into body animation');
+                            }
+                        } catch (e) {
+                            console.warn('Failed to merge animations:', e);
+                        }
+                        
+                        state.faceAnimation = true; // Set flag that we have a face animation
+                    } else {
+                        state.faceAnimation = false; // No face animation
+                    }
+                    
+                    // If no body motion selected, load default
+                    if (!bodyMotion || bodyMotion === 'none') {
+                        if (state.selectedMotion.motion) {
+                            const motionPath = isOfficial
+                                ? `/animations/${state.selectedMotion.motion}`
+                                : `/mmd/motion/${folder}/${state.selectedMotion.motion}`;
+                            await state.model.loadVmd('body', motionPath);
+                        } else {
+                            await state.model.loadVmd('body', '/animations/One More Last Time.vmd');
+                        }
+                    }
+                } else {
+                    await state.model.loadVmd('body', '/animations/One More Last Time.vmd');
+                }
+                
+                state.engine.runRenderLoop();
+                
+                // Wait a frame
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+                
+                state.model.show('body');
+                
+                // Wait another frame
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+                
+                // Reset physics
+                state.engine.resetPhysics();
+                
+                // Start countdown
+                await startCountdown();
+                
+            } catch (error) {
+                console.error('Failed to load motion:', error);
+            }
+        }
+
+        async function startCountdown() {
+            const overlay = document.getElementById('countdownOverlay');
+            const number = document.getElementById('countdownNumber');
+            const cameraViewport = document.getElementById('cameraViewport');
+            const detectionGuide = document.getElementById('detectionGuide');
+
+            // Set isPlaying to true so pose detection works during countdown
+            state.isPlaying = true;
+            state.isPaused = false;
+
+            // Wait for full body person detection AND bone binding completion before starting countdown
+            state.waitingForPerson = true;
+            state.personDetected = false;
+            state.boneBindingComplete = false;
+            state.boneBindingFrames = 0;
+
+            // Maximize camera view and show detection guide
+            cameraViewport.classList.add('maximized');
+            detectionGuide.classList.add('show');
+
+            // Show waiting message (no green text, just the guide)
+            overlay.style.display = 'flex';
+            number.style.display = 'none';
+
+            // Wait for person detection AND bone binding completion
+            await new Promise((resolve) => {
+                const checkPerson = () => {
+                    // 需要同时满足：检测到人 AND 骨骼绑定完成
+                    if (state.personDetected && state.boneBindingComplete) {
+                        detectionGuide.textContent = '骨骼绑定完成！';
+                        state.waitingForPerson = false;
+                        resolve();
+                        return;
+                    }
+
+                    // 动态更新提示文字
+                    if (!state.personDetected) {
+                        detectionGuide.textContent = '请站在摄像头前';
+                    } else if (!state.boneBindingComplete) {
+                        const progress = Math.min(100, Math.round((state.boneBindingFrames / 15) * 100));
+                        detectionGuide.textContent = `正在绑定骨骼... ${progress}%`;
+                    }
+
+                    if (!state.waitingForPerson) {
+                        resolve();
+                        return;
+                    }
+                    requestAnimationFrame(checkPerson);
+                };
+                checkPerson();
+            });
+
+            // Minimize camera view and hide detection guide
+            cameraViewport.classList.remove('maximized');
+            detectionGuide.classList.remove('show');
+
+            // Start countdown (only show numbers)
+            number.style.display = 'block';
+            for (let i = 3; i > 0; i--) {
+                number.textContent = i;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            number.textContent = '';
+            await new Promise(resolve => setTimeout(resolve, 300));
+            overlay.style.display = 'none';
+            
+            // Start animation and audio
+            // Reze Engine only supports one animation at a time
+            // So we'll play the body animation, and use face animation for facial expressions if available
+            state.model.show('body');
+            state.model.play('body', { loop: false });
+            
+            // Load and play audio
+            if (state.selectedMotion && state.selectedMotion.hasAudio && state.selectedMotion.folder && state.selectedMotion.audioName) {
+                const isOfficial = state.selectedMotion.folder === 'official';
+                const audioPath = isOfficial
+                    ? `/audios/${state.selectedMotion.audioName}`
+                    : `/mmd/motion/${state.selectedMotion.folder}/${state.selectedMotion.audioName}`;
+                state.audio = new Audio(audioPath);
+                detectBPMFromAudio(audioPath);
+                state.audio.play().catch(err => console.error('Audio play failed:', err));
+                
+                state.audio.addEventListener('ended', () => {
+                    endDance();
+                });
+            } else {
+                // Fallback to default audio
+                const audioPath = '/audios/One More Last Time.wav';
+                state.audio = new Audio(audioPath);
+                detectBPMFromAudio(audioPath);
+                state.audio.play().catch(err => console.error('Audio play failed:', err));
+                
+                state.audio.addEventListener('ended', () => {
+                    endDance();
+                });
+            }
+            
+            state.isPlaying = true;
+            state.isPaused = false;
+            
+            // Start progress updates
+            startPlayerProgressUpdates();
+        }
+
+        function togglePlayPause() {
+            if (!state.isPlaying) return;
+            
+            state.isPaused = !state.isPaused;
+            
+            if (state.isPaused) {
+                if (state.audio) state.audio.pause();
+                if (state.model) state.model.pause();
+                document.getElementById('playerPlayPauseBtn').innerHTML = `
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                `;
+            } else {
+                if (state.audio) state.audio.play();
+                if (state.model) {
+                    // Reze Engine only supports one animation at a time
+                    // So we'll play the body animation
+                    state.model.show('body');
+                    state.model.play('body');
+                }
+                document.getElementById('playerPlayPauseBtn').innerHTML = `
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                `;
+                startPlayerProgressUpdates();
+            }
+        }
+        
+        function resetPhysics() {
+            if (state.engine) {
+                console.log('Resetting physics...');
+                state.engine.resetPhysics();
+            }
+        }
+        
+        function startPlayerProgressUpdates() {
+            let rafId = null;
+            
+            const updateProgress = () => {
+                if (state.model && state.isPlaying && !state.isPaused) {
+                    const prog = state.model.getAnimationProgress();
+                    document.getElementById('playerCurrentTime').textContent = formatTime(prog.current);
+                    document.getElementById('playerRemainingTime').textContent = formatRemainingTime(prog.current, prog.duration);
+                    document.getElementById('playerProgressSlider').value = prog.percentage;
+                    
+                    if (prog.playing) {
+                        rafId = requestAnimationFrame(updateProgress);
+                    }
+                }
+            };
+            
+            if (state.isPlaying && !state.isPaused) {
+                rafId = requestAnimationFrame(updateProgress);
+            }
+        }
+        
+        function handlePlayerSeek(value) {
+            if (state.engine && state.model) {
+                const prog = state.model.getAnimationProgress();
+                if (prog.duration > 0) {
+                    const seekTime = (value / 100) * prog.duration;
+                    state.model.seek(seekTime);
+                    if (state.audio) {
+                        state.audio.currentTime = seekTime;
+                    }
+                    
+                    // Reset physics after seek
+                    if (state.seekResetRafRef !== null) {
+                        cancelAnimationFrame(state.seekResetRafRef);
+                    }
+                    state.seekResetRafRef = requestAnimationFrame(() => {
+                        state.seekResetRafRef = null;
+                        state.engine.resetPhysics();
+                    });
+                }
+            }
+        }
+
+
+
+        function endDance() {
+            state.isPlaying = false;
+            state.isPaused = false;
+            
+            if (state.audio) {
+                state.audio.pause();
+                state.audio = null;
+            }
+            
+            showRating(`最终: ${state.score}`);
+        }
+
+        function stopAndReturn() {
+            // Don't call endDance() here because it tries to show rating
+            // which might not exist on the player page
+            state.isPlaying = false;
+            state.isPaused = false;
+            
+            if (state.audio) {
+                state.audio.pause();
+                state.audio = null;
+            }
+            
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+            }
+            
+            if (state.stream) {
+                state.stream.getTracks().forEach(track => track.stop());
+            }
+            
+            if (state.engine) {
+                state.engine.dispose();
+                state.engine = null;
+            }
+            
+            state.model = null;
+            state.score = 0;
+            state.combo = 0;
+            state.streak = 0;
+            state.maxCombo = 0;
+            state.smoothedLandmarks = null;
+            state.personDetected = false;
+            state.waitingForPerson = false;
+            state.boneBindingComplete = false;
+            state.boneBindingFrames = 0;
+            
+            try {
+                document.getElementById('scoreValue').textContent = '0';
+                updateScoreDisplay();
+            } catch (e) {
+                // Ignore if scoreValue element doesn't exist
+            }
+            
+            showPage('mainPage');
+        }
+
+        // Camera initialization
+        async function initCamera() {
+            const canvas = document.getElementById('cameraCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            try {
+                canvas.width = 1920;
+                canvas.height = 1080;
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        width: 1920, 
+                        height: 1080, 
+                        frameRate: 30,
+                        facingMode: 'user'
+                    }
+                });
+                
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.playsInline = true;
+                video.autoplay = true;
+                video.muted = true;
+                video.width = 1920;
+                video.height = 1080;
+                
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Video metadata load timeout'));
+                    }, 5000);
+                    
+                    video.onloadedmetadata = () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    };
+                    
+                    video.onerror = (err) => {
+                        clearTimeout(timeout);
+                        reject(err);
+                    };
+                    
+                    video.play().catch(err => {
+                        clearTimeout(timeout);
+                        reject(err);
+                    });
+                });
+                
+                console.log('Camera stream obtained:', stream.getTracks());
+                console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+                
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                let animationId;
+                function drawVideoFrame() {
+                    if (video && video.readyState >= 2) {
+                        try {
+                            ctx.save();
+                            ctx.scale(-1, 1);
+                            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+                            ctx.restore();
+
+                            // Draw skeleton if available
+                            if (state.lastPoseResults && state.lastPoseResults.poseLandmarks) {
+                                const mirroredLandmarks = mirrorLandmarks(state.lastPoseResults.poseLandmarks);
+                                
+                                mirroredLandmarks.forEach((landmark, index) => {
+                                    const x = landmark.x * canvas.width;
+                                    const y = landmark.y * canvas.height;
+                                    
+                                    ctx.beginPath();
+                                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                                    ctx.fillStyle = '#4ade80';
+                                    ctx.fill();
+                                    ctx.strokeStyle = '#1e293b';
+                                    ctx.lineWidth = 2;
+                                    ctx.stroke();
+                                });
+                                
+                                const connections = [
+                                    [12, 14], [14, 16], [11, 13], [13, 15],
+                                    [11, 23], [24, 26], [26, 28], [23, 25], [25, 27]
+                                ];
+                                
+                                ctx.strokeStyle = '#38bdf8';
+                                ctx.lineWidth = 3;
+                                
+                                connections.forEach(([i, j]) => {
+                                    if (mirroredLandmarks[i] && mirroredLandmarks[j]) {
+                                        const start = mirroredLandmarks[i];
+                                        const end = mirroredLandmarks[j];
+                                        
+                                        ctx.beginPath();
+                                        ctx.moveTo(start.x * canvas.width, start.y * canvas.height);
+                                        ctx.lineTo(end.x * canvas.width, end.y * canvas.height);
+                                        ctx.stroke();
+                                    }
+                                });
+                            }
+                        } catch (err) {
+                            console.error('Draw frame error:', err);
+                        }
+                    }
+                    animationId = requestAnimationFrame(drawVideoFrame);
+                }
+                drawVideoFrame();
+                
+                try {
+                    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js');
+                } catch (err) {
+                    console.error('Failed to load MediaPipe Pose from CDN, trying alternative URL...');
+                    // Try alternative CDN
+                    try {
+                        await loadScript('https://unpkg.com/@mediapipe/pose@0.5.1675469404/pose.js');
+                    } catch (err2) {
+                        console.error('Failed to load MediaPipe Pose:', err2);
+                        throw new Error('MediaPipe Pose failed to load. Please check your network connection.');
+                    }
+                }
+                
+                if (!window.Pose) {
+                    throw new Error('MediaPipe Pose not loaded');
+                }
+                
+                const pose = new Pose({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+                });
+                
+                pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    enableSegmentation: false,
+                    smoothSegmentation: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                pose.onResults((results) => {
+                    // Store results for drawing in drawVideoFrame
+                    state.lastPoseResults = results;
+
+                    // Check if person is detected (完善后的严格标准)
+                    let currentFrameHasPerson = false;
+                    if (results.poseLandmarks) {
+                        // 上半身关键点：头、肩、手肘、手腕
+                        const upperBodyLandmarks = [0, 11, 12, 13, 14, 15, 16];
+                        // 下半身关键点：臀、膝、脚踝
+                        const lowerBodyLandmarks = [23, 24, 25, 26, 27, 28];
+
+                        let upperVisibleCount = 0;
+                        let lowerVisibleCount = 0;
+                        let totalVisibility = 0;
+
+                        upperBodyLandmarks.forEach(idx => {
+                            if (results.poseLandmarks[idx] && results.poseLandmarks[idx].visibility > 0.5) {
+                                upperVisibleCount++;
+                                totalVisibility += results.poseLandmarks[idx].visibility;
+                            }
+                        });
+
+                        lowerBodyLandmarks.forEach(idx => {
+                            if (results.poseLandmarks[idx] && results.poseLandmarks[idx].visibility > 0.5) {
+                                lowerVisibleCount++;
+                                totalVisibility += results.poseLandmarks[idx].visibility;
+                            }
+                        });
+
+                        const totalVisible = upperVisibleCount + lowerVisibleCount;
+                        const avgVisibility = totalVisible > 0 ? totalVisibility / totalVisible : 0;
+
+                        // 要求：上半身至少5个点可见，下半身至少4个点可见，平均可见度 > 0.55
+                        if (upperVisibleCount >= 5 && lowerVisibleCount >= 4 && avgVisibility > 0.55) {
+                            currentFrameHasPerson = true;
+                            state.personDetected = true;
+                        }
+                    }
+
+                    // 骨骼绑定跟踪：只有在等待阶段才跟踪
+                    if (state.waitingForPerson) {
+                        if (currentFrameHasPerson) {
+                            state.boneBindingFrames++;
+                            // 连续15帧检测到人（大约0.5秒），认为骨骼绑定完成
+                            if (state.boneBindingFrames >= 15) {
+                                state.boneBindingComplete = true;
+                            }
+                        } else {
+                            // 没有人时重置计数
+                            state.boneBindingFrames = 0;
+                            state.boneBindingComplete = false;
+                        }
+                    }
+
+                    // 如果当前帧没有人，且不在等待阶段，标记 personDetected 为 false
+                    if (!currentFrameHasPerson && !state.waitingForPerson) {
+                        state.personDetected = false;
+                    }
+
+                    // BPM-based scoring: only calculate score at regular intervals
+                    if (results.poseLandmarks && state.isPlaying && !state.isPaused && state.personDetected) {
+                        const currentTime = performance.now();
+                        const interval = 60000 / state.detectedBPM; // BPM-based interval
+                        if (!state.lastScoreTime || currentTime - state.lastScoreTime >= interval) {
+                            state.lastScoreTime = currentTime;
+                            const mirrored = mirrorLandmarks(results.poseLandmarks);
+                            const smoothed = smoothLandmarks(mirrored, state.smoothingFactor);
+                            calculateScore(smoothed);
+                        }
+                    }
+                });
+                
+                state.pose = pose;
+                console.log('开始摄像头处理...');
+
+                // 使用requestAnimationFrame直接处理，不使用Camera类
+                async function processFrame() {
+                    if (!state.pose) return;
+
+                    if (video.readyState >= 2) {
+                        try {
+                            await pose.send({ image: video });
+                        } catch (err) {
+                            if (err.message !== 'The video is not ready.') {
+                                console.error('Pose send error:', err);
+                            }
+                        }
+                    }
+
+                    requestAnimationFrame(processFrame);
+                }
+
+                processFrame();
+                console.log('摄像头处理启动成功');
+                
+                state.video = video;
+                state.stream = stream;
+                state.animationId = animationId;
+                
+                console.log('Camera initialized successfully');
+                
+            } catch (error) {
+                console.error('Camera init failed:', error);
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('摄像头初始化失败:', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillStyle = '#1e293b';
+                ctx.font = '14px sans-serif';
+                ctx.fillText(error.message, canvas.width / 2, canvas.height / 2);
+                ctx.fillText('请检查摄像头权限', canvas.width / 2, canvas.height / 2 + 20);
+            }
+        }
+
+        // MediaPipe 到 MMD 骨骼名称映射
+        const MEDIAPIPE_TO_MMD_MAP = {
+            0: '頭',           // 鼻子 → 頭
+            11: '左肩',        // 左肩膀
+            12: '右肩',        // 右肩膀
+            13: '左腕',        // 左肘 → 左腕
+            14: '右腕',        // 右肘 → 右腕
+            15: '左手首',      // 左手腕
+            16: '右手首',      // 右手腕
+            23: '左足',        // 左臀 → 左足
+            24: '右足',        // 右臀 → 右足
+            25: '左ひざ',      // 左膝
+            26: '右ひざ',      // 右膝
+            27: '左足首',      // 左脚踝
+            28: '右足首'       // 右脚踝
+        };
+
+        // MMD 骨骼名称到 MediaPipe 索引的映射
+        const MMD_TO_MEDIAPIPE_MAP = {
+            '頭': 0,
+            '左肩': 11,
+            '右肩': 12,
+            '左腕': 13,
+            '右腕': 14,
+            '左手首': 15,
+            '右手首': 16,
+            '左足': 23,
+            '右足': 24,
+            '左ひざ': 25,
+            '右ひざ': 26,
+            '左足首': 27,
+            '右足首': 28
+        };
+
+        // 将 MediaPipe 2D 坐标转换为 3D 向量
+        function mediapipeLandmarkTo3D(landmark) {
+            return {
+                x: (landmark.x - 0.5) * 200,  // 归一化 → -100~100 厘米
+                y: -(landmark.y - 0.5) * 200, // Y轴翻转
+                z: landmark.z * 100           // Z轴
+            };
+        }
+
+        // 从音频提取 BPM
+        async function detectBPMFromAudio(audioPath) {
+            try {
+                const response = await fetch(audioPath);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                const rawData = audioBuffer.getChannelData(0);
+                const samples = rawData.length;
+                const sampleRate = audioBuffer.sampleRate;
+
+                // 使用简化的节拍检测算法
+                const interval = Math.floor(sampleRate / 10); // 分析前10秒
+                const peaks = [];
+                const threshold = 0.8;
+
+                let maxVal = 0;
+                for (let i = 0; i < interval; i++) {
+                    if (Math.abs(rawData[i]) > maxVal) maxVal = Math.abs(rawData[i]);
+                }
+                const cutoff = maxVal * threshold;
+
+                let lastPeak = -1;
+                let minPeakDistance = Math.floor(sampleRate * 60 / 200); // 最小间隔对应200BPM
+
+                for (let i = 0; i < interval; i++) {
+                    if (Math.abs(rawData[i]) > cutoff) {
+                        if (lastPeak === -1 || i - lastPeak > minPeakDistance) {
+                            peaks.push(i);
+                            lastPeak = i;
+                        }
+                    }
+                }
+
+                if (peaks.length < 2) {
+                    state.detectedBPM = 120;
+                    return;
+                }
+
+                // 计算峰值间平均间隔
+                let totalInterval = 0;
+                for (let i = 1; i < peaks.length; i++) {
+                    totalInterval += peaks[i] - peaks[i - 1];
+                }
+                const avgInterval = totalInterval / (peaks.length - 1);
+                const bpm = Math.round((60 * sampleRate) / avgInterval);
+
+                state.detectedBPM = Math.max(60, Math.min(200, bpm));
+                console.log('Detected BPM:', state.detectedBPM);
+            } catch (error) {
+                console.warn('BPM detection failed, using default:', error);
+                state.detectedBPM = 120;
+            }
+        }
+
+        // 镜像骨骼数据（因为摄像头画面是镜像的，用户看镜子跳舞）
+        function mirrorLandmarks(landmarks) {
+            if (!landmarks) return [];
+            return landmarks.map(landmark => ({
+                ...landmark,
+                x: 1 - landmark.x  // 镜像 X 坐标
+            }));
+        }
+
+        // 时序平滑 - 减少骨骼抖动（指数移动平均）
+        function smoothLandmarks(newLandmarks, smoothingFactor = 0.7) {
+            if (!newLandmarks) return null;
+
+            if (!state.smoothedLandmarks) {
+                state.smoothedLandmarks = JSON.parse(JSON.stringify(newLandmarks));
+                return state.smoothedLandmarks;
+            }
+
+            for (let i = 0; i < newLandmarks.length; i++) {
+                if (newLandmarks[i] && state.smoothedLandmarks[i]) {
+                    state.smoothedLandmarks[i].x = state.smoothedLandmarks[i].x * (1 - smoothingFactor) + newLandmarks[i].x * smoothingFactor;
+                    state.smoothedLandmarks[i].y = state.smoothedLandmarks[i].y * (1 - smoothingFactor) + newLandmarks[i].y * smoothingFactor;
+                    state.smoothedLandmarks[i].z = state.smoothedLandmarks[i].z * (1 - smoothingFactor) + newLandmarks[i].z * smoothingFactor;
+                    state.smoothedLandmarks[i].visibility = state.smoothedLandmarks[i].visibility * (1 - smoothingFactor) + newLandmarks[i].visibility * smoothingFactor;
+                } else if (newLandmarks[i]) {
+                    state.smoothedLandmarks[i] = { ...newLandmarks[i] };
+                }
+            }
+            return state.smoothedLandmarks;
+        }
+
+        // 获取 MMD 模型的骨骼 3D 位置（考虑镜像模式）
+        function getMMDBonePositions(mirrorMode = true) {
+            if (!state.model) return null;
+            
+            const positions = {};
+            for (const [boneName, mpIndex] of Object.entries(MMD_TO_MEDIAPIPE_MAP)) {
+                const pos = state.model.getBoneWorldPosition(boneName);
+                if (pos) {
+                    let x = pos.x;
+                    // 在镜像模式下，用户的左右是颠倒的，所以需要镜像 MMD 的 X 坐标
+                    if (mirrorMode) {
+                        x = -x;
+                    }
+                    positions[mpIndex] = {
+                        x: x,
+                        y: pos.y,
+                        z: pos.z
+                    };
+                }
+            }
+            return positions;
+        }
+
+        // 获取当前动画帧时间
+        function getCurrentAnimationTime() {
+            if (!state.model || !state.model.animationState) return 0;
+            return state.model.animationState.getCurrentTime();
+        }
+
+        // 计算两点间的欧氏距离
+        function distance3D(a, b) {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const dz = a.z - b.z;
+            return Math.sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        // 归一化向量
+        function normalizeVector(v) {
+            const mag = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+            if (mag === 0) return { x: 0, y: 0, z: 0 };
+            return { x: v.x / mag, y: v.y / mag, z: v.z / mag };
+        }
+
+        // 计算两个向量之间的角度（弧度）
+        function angleBetweenVectors(a, b) {
+            const dot = a.x * b.x + a.y * b.y + a.z * b.z;
+            const magA = Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+            const magB = Math.sqrt(b.x * b.x + b.y * b.y + b.z * b.z);
+            if (magA === 0 || magB === 0) return 0;
+            return Math.acos(Math.max(-1, Math.min(1, dot / (magA * magB))));
+        }
+
+        // 计算角度差异（用于关节）
+        function angleDifference(landmarks, mpIdx1, mpIdx2, mpIdx3) {
+            if (!landmarks[mpIdx1] || !landmarks[mpIdx2] || !landmarks[mpIdx3]) return null;
+            
+            const a = mediapipeLandmarkTo3D(landmarks[mpIdx1]);
+            const b = mediapipeLandmarkTo3D(landmarks[mpIdx2]);
+            const c = mediapipeLandmarkTo3D(landmarks[mpIdx3]);
+            
+            const ba = { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+            const bc = { x: c.x - b.x, y: c.y - b.y, z: c.z - b.z };
+            
+            const dot = ba.x * bc.x + ba.y * bc.y + ba.z * bc.z;
+            const magBA = Math.sqrt(ba.x * ba.x + ba.y * ba.y + ba.z * ba.z);
+            const magBC = Math.sqrt(bc.x * bc.x + bc.y * bc.y + bc.z * bc.z);
+            
+            if (magBA === 0 || magBC === 0) return null;
+            
+            return Math.acos(Math.max(-1, Math.min(1, dot / (magBA * magBC))));
+        }
+
+        // 计算关节角度差异
+        function calculateJointAngleScore(mediapipeLandmarks, mmdPositions) {
+            // 左肘角度: 肩(11) - 肘(13) - 腕(15)
+            // 右肘角度: 肩(12) - 肘(14) - 腕(16)
+            // 左膝角度: 臀(23) - 膝(25) - 踝(27)
+            // 右膝角度: 臀(24) - 膝(26) - 踝(28)
+            const jointTriplets = [
+                { shoulder: 11, joint: 13, wrist: 15, name: '左肘' },
+                { shoulder: 12, joint: 14, wrist: 16, name: '右肘' },
+                { shoulder: 23, joint: 25, wrist: 27, name: '左膝' },
+                { shoulder: 24, joint: 26, wrist: 28, name: '右膝' }
+            ];
+
+            let angleScore = 0;
+            let validJoints = 0;
+
+            jointTriplets.forEach(({ shoulder, joint, wrist }) => {
+                const mp = mediapipeLandmarks;
+                if (mp[shoulder] && mp[joint] && mp[wrist] && 
+                    mp[shoulder].visibility > 0.35 && mp[joint].visibility > 0.35 && mp[wrist].visibility > 0.35) {
+                    
+                    // 计算 MediaPipe 角度
+                    const mpAngle = angleDifference(mp, shoulder, joint, wrist);
+                    
+                    // 计算 MMD 角度
+                    const mmdAngle = angleDifference(mmdPositions, shoulder, joint, wrist);
+                    
+                    if (mpAngle !== null && mmdAngle !== null) {
+                        const angleDiff = Math.abs(mpAngle - mmdAngle);
+                        // 角度差异越小分数越高 (180度以内)
+                        const jointScore = Math.max(0, 1 - angleDiff / Math.PI);
+                        angleScore += jointScore;
+                        validJoints++;
+                    }
+                }
+            });
+
+            return validJoints > 0 ? angleScore / validJoints : 0;
+        }
+
+        // 计算动作匹配得分（实时对比舞蹈动画）
+        function calculateMotionScore(mediapipeLandmarks) {
+            if (!mediapipeLandmarks) {
+                return { score: 0, rating: 'Miss' };
+            }
+
+            const mmdPositions = getMMDBonePositions(true); // 镜像模式
+            if (!mmdPositions) {
+                // 如果没有 MMD 模型，返回基于可见性的得分
+                return { score: 0, rating: 'Miss' };
+            }
+
+            // ========== 位置评分 ==========
+            let totalDiff = 0;
+            let validCount = 0;
+
+            // 关键骨骼对应关系（MediaPipe 索引 -> 权重）
+            const keyBoneWeights = {
+                11: 0.10,  // 左肩
+                12: 0.10,  // 右肩
+                13: 0.08,   // 左肘
+                14: 0.08,   // 右肘
+                15: 0.10,   // 左手腕
+                16: 0.10,   // 右手腕
+                23: 0.08,   // 左臀
+                24: 0.08,   // 右臀
+                25: 0.06,   // 左膝
+                26: 0.06,   // 右膝
+                27: 0.06,   // 左脚踝
+                28: 0.06    // 右脚踝
+            };
+
+            // 归一化因子：肩膀间距离
+            const getShoulderWidth = (landmarks) => {
+                if (!landmarks[11] || !landmarks[12]) return 1;
+                const dx = landmarks[11].x - landmarks[12].x;
+                const dy = landmarks[11].y - landmarks[12].y;
+                const dz = landmarks[11].z - landmarks[12].z;
+                return Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+            };
+
+            const mpShoulderWidth = getShoulderWidth(mediapipeLandmarks);
+            const mmdShoulderWidth = getShoulderWidth(mmdPositions);
+            const scaleFactor = mmdShoulderWidth / mpShoulderWidth || 1;
+
+            // 计算各关键点差异
+            for (const [mpIndexStr, weight] of Object.entries(keyBoneWeights)) {
+                const idx = parseInt(mpIndexStr);
+                const mpLandmark = mediapipeLandmarks[idx];
+                const mmdPos = mmdPositions[idx];
+
+                if (mpLandmark && mmdPos && mpLandmark.visibility > 0.35) {
+                    const mp3D = mediapipeLandmarkTo3D(mpLandmark);
+
+                    // 缩放用户位置以匹配 MMD 模型比例
+                    const scaledMp = {
+                        x: mp3D.x * scaleFactor,
+                        y: mp3D.y * scaleFactor,
+                        z: mp3D.z * scaleFactor
+                    };
+
+                    // 计算差异
+                    const diff = distance3D(scaledMp, mmdPos);
+                    totalDiff += diff * weight;
+                    validCount++;
+                }
+            }
+
+            // 位置得分 (0-1)
+            let positionScore = 0;
+            if (validCount === 0) {
+                return { score: 0, rating: 'Miss', positionScore: 0, angleScore: 0 };
+            }
+            const avgDiff = totalDiff / validCount;
+            const maxDiff = 120; // 厘米
+            positionScore = Math.max(0, Math.min(1, 1 - avgDiff / maxDiff));
+
+            // ========== 关节角度评分 ==========
+            const angleScore = calculateJointAngleScore(mediapipeLandmarks, mmdPositions);
+
+            // ========== 综合评分 ==========
+            // 位置占 60%，角度占 40%
+            const combinedScore = positionScore * 0.6 + angleScore * 0.4;
+
+            // 低于 0.3 的综合得分视为 Miss（用户动作与目标差距太大）
+            if (combinedScore < 0.3) {
+                return { score: 0, rating: 'Miss', positionScore, angleScore };
+            }
+
+            // 计算最终得分 (0-10)
+            const score = Math.round(combinedScore * 10 * 10) / 10;
+
+            // 确定评级
+            let rating;
+            if (score >= 7) rating = 'Perfect';
+            else if (score >= 5) rating = 'Great';
+            else if (score >= 3) rating = 'Good';
+            else rating = 'Bad';
+
+            return { score, rating, positionScore, angleScore };
+        }
+
+        function calculateScore(landmarks) {
+            const { score, rating } = calculateMotionScore(landmarks);
+            
+            showRating(rating);
+            
+            // Combo system: increase combo for good ratings, reset for Bad/Miss
+            if (rating === 'Perfect' || rating === 'Great' || rating === 'Good') {
+                state.combo++;
+                if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+                state.streak++;
+            } else {
+                state.combo = 0;
+                state.streak = 0;
+            }
+            
+            // Difficulty coefficient (based on motion speed/complexity - simplified as BPM/120)
+            const difficultyCoef = state.detectedBPM / 120;
+            state.difficulty = Math.max(0.5, Math.min(2.0, difficultyCoef));
+            
+            // Combo multiplier: 1x base, +0.1x per combo up to 2x max
+            const comboMultiplier = 1 + Math.min(state.combo * 0.05, 1);
+            
+            // Calculate points with all modifiers
+            const scoreMap = { Perfect: 10, Great: 8, Good: 5, Bad: 2, Miss: 0 };
+            const basePoints = scoreMap[rating];
+            const finalPoints = Math.round(basePoints * comboMultiplier * state.difficulty);
+            
+            state.score += finalPoints;
+            state.score = Math.min(state.score, 99999);
+            
+            document.getElementById('scoreValue').textContent = state.score;
+            updateScoreDisplay();
+        }
+        
+        function updateScoreDisplay() {
+            const comboDisplay = document.getElementById('comboDisplay');
+            if (comboDisplay) {
+                comboDisplay.textContent = state.combo > 0 ? `${state.combo} Combo` : '';
+                comboDisplay.className = state.combo > 0 ? 'combo-display visible' : 'combo-display';
+            }
+            const bpmDisplay = document.getElementById('bpmDisplay');
+            if (bpmDisplay) {
+                bpmDisplay.textContent = `BPM: ${state.detectedBPM}`;
+            }
+        }
+
+        function showRating(rating) {
+            const display = document.getElementById('ratingDisplay');
+            display.textContent = rating;
+            display.className = 'rating-display show ' + rating.toLowerCase();
+            
+            setTimeout(() => {
+                display.classList.remove('show');
+            }, 800);
+        }
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        function showMotionUploadDialog() {
+            document.getElementById('motionFileInput').click();
+        }
+
+        function showModelUploadDialog() {
+            document.getElementById('modelFileInput').click();
+        }
+
+        document.getElementById('motionFileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            console.log('Uploaded motion files:', files);
+            
+            if (files.length === 0) return;
+            
+            try {
+                const formData = new FormData();
+                files.forEach(file => {
+                    formData.append('files', file);
+                });
+                
+                const response = await fetch('/api/upload-motion', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+                
+                const result = await response.json();
+                console.log('Motion uploaded:', result);
+                
+                alert('动作上传成功！');
+                
+                // Reload motions to show the new one
+                await loadMotions();
+                
+            } catch (error) {
+                console.error('Failed to upload motion:', error);
+                alert('动作上传失败：' + error.message);
+            }
+            
+            e.target.value = '';
+        });
+
+        document.getElementById('modelFileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/upload-model', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+                
+                const result = await response.json();
+                console.log('Model uploaded:', result);
+                
+                // Add model to list
+                const models = getSavedModels();
+                const existingIndex = models.findIndex(m => m.name === result.name);
+                
+                if (existingIndex >= 0) {
+                    models[existingIndex] = {
+                        name: result.name,
+                        path: result.path,
+                        isFolder: result.isFolder,
+                        folderPath: result.folderPath
+                    };
+                } else {
+                    models.push({
+                        name: result.name,
+                        path: result.path,
+                        isFolder: result.isFolder,
+                        folderPath: result.folderPath
+                    });
+                }
+                saveModels(models);
+                
+                // Update select dropdown
+                updateModelSelect();
+                
+                // Select the new model
+                const select = document.getElementById('modelSelect');
+                select.value = result.name;
+                saveSelectedModel(result.name);
+                
+                alert('模型上传成功！');
+                
+            } catch (error) {
+                console.error('Failed to upload model:', error);
+                alert('模型上传失败：' + error.message);
+            }
+            
+            e.target.value = '';
+        });
+
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('show');
+        }
+
+        // Model management
+        const DEFAULT_MODEL = '塞尔凯特';
+        const STORAGE_KEY_MODELS = 'mikaScoreModels';
+        const STORAGE_KEY_SELECTED_MODEL = 'mikaScoreSelectedModel';
+
+        function getSavedModels() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_MODELS);
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                console.warn('Failed to load saved models:', e);
+                return [];
+            }
+        }
+
+        function saveModels(models) {
+            try {
+                localStorage.setItem(STORAGE_KEY_MODELS, JSON.stringify(models));
+            } catch (e) {
+                console.warn('Failed to save models:', e);
+            }
+        }
+
+        function getSelectedModel() {
+            try {
+                return localStorage.getItem(STORAGE_KEY_SELECTED_MODEL) || DEFAULT_MODEL;
+            } catch (e) {
+                return DEFAULT_MODEL;
+            }
+        }
+
+        function saveSelectedModel(modelName) {
+            try {
+                localStorage.setItem(STORAGE_KEY_SELECTED_MODEL, modelName);
+            } catch (e) {
+                console.warn('Failed to save selected model:', e);
+            }
+        }
+
+        function onModelChange() {
+            const select = document.getElementById('modelSelect');
+            const selectedModel = select.value;
+            saveSelectedModel(selectedModel);
+            console.log('Model selected:', selectedModel);
+        }
+
+        async function handleModelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Upload model to server
+                const response = await fetch('/api/upload-model', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+
+                const result = await response.json();
+                console.log('Model uploaded:', result);
+
+                // Add model to list
+                const models = getSavedModels();
+                const existingIndex = models.findIndex(m => m.name === result.name);
+                
+                if (existingIndex >= 0) {
+                    models[existingIndex] = {
+                        name: result.name,
+                        path: result.path,
+                        isFolder: result.isFolder,
+                        folderPath: result.folderPath
+                    };
+                } else {
+                    models.push({
+                        name: result.name,
+                        path: result.path,
+                        isFolder: result.isFolder,
+                        folderPath: result.folderPath
+                    });
+                }
+                saveModels(models);
+
+                // Update select dropdown
+                updateModelSelect();
+
+                // Select the new model
+                const select = document.getElementById('modelSelect');
+                select.value = result.name;
+                saveSelectedModel(result.name);
+
+                alert('模型上传成功！');
+
+            } catch (error) {
+                console.error('Failed to upload model:', error);
+                alert('模型上传失败：' + error.message);
+            }
+
+            // Clear input
+            event.target.value = '';
+        }
+
+        function updateModelSelect() {
+            const select = document.getElementById('modelSelect');
+            const savedModels = getSavedModels();
+            const selectedModel = getSelectedModel();
+
+            // Clear existing options except the default
+            select.innerHTML = `<option value="塞尔凯特">塞尔凯特</option>`;
+
+            // Add custom models
+            savedModels.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.name;
+                option.textContent = model.name + ' (自定义)';
+                select.appendChild(option);
+            });
+
+            // Restore selection
+            select.value = selectedModel;
+        }
+
+        function getCurrentModelPath() {
+            const selectedModel = getSelectedModel();
+            const savedModels = getSavedModels();
+            const customModel = savedModels.find(m => m.name === selectedModel);
+
+            if (customModel) {
+                // If it's a folder-based model, the path is just the folder path + model name
+                if (customModel.isFolder) {
+                    return `${customModel.folderPath}/${selectedModel}.pmx`;
+                }
+                return customModel.path;
+            }
+
+            // Default model path
+            return `/mmd/models/${selectedModel}/${selectedModel}.pmx`;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+            if (e.code !== 'Space' && e.key !== ' ') return;
+            e.preventDefault();
+            
+            if (state.currentPage === 'mainPage') {
+                if (state.isPlaying && !state.isPaused) handlePause();
+                else if (state.isPaused) handleResume();
+                else handlePlay();
+            } else if (state.currentPage === 'playerPage') {
+                togglePlayPause();
+            }
+        });
+
+        async function initializeSystem() {
+            await loadMotions();
+            updateModelSelect(); // Initialize model select dropdown
+            
+            setTimeout(() => {
+                showPage('mainPage');
+                initRezeEngine();
+            }, 2000);
+        }
+
+        window.addEventListener('load', initializeSystem);
+        
+        window.showPage = showPage;
+        window.startDance = startDance;
+        window.togglePlayPause = togglePlayPause;
+        window.stopAndReturn = stopAndReturn;
+        window.toggleSettings = toggleSettings;
+        window.showMotionUploadDialog = showMotionUploadDialog;
+        window.showModelUploadDialog = showModelUploadDialog;
+        window.toggleMainOfficialMotion = toggleMainOfficialMotion;
+        window.selectOfficialMotion = selectOfficialMotion;
+    </script>
+</body>
+</html>
