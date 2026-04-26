@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MiKaScore</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/static/js/reze-engine.bundle.js"></script>
     <style>
         * {
             margin: 0;
@@ -1461,7 +1463,8 @@
             
             try {
                 // Load Reze Engine
-                const { Engine, Vec3 } = await import('/static/js/reze-engine.bundle.js');
+                const Engine = window.Engine;
+                const Vec3 = window.Vec3;
                 
                 console.log('Initializing Reze Engine...');
                 
@@ -1753,7 +1756,8 @@
                 
                 // Re-initialize engine on player page
                 const canvas = document.getElementById('playerMmdCanvas');
-                const { Engine, Vec3 } = await import('/static/js/reze-engine.bundle.js');
+                const Engine = window.Engine;
+                const Vec3 = window.Vec3;
                 
                 state.engine = new Engine(canvas, {
                     camera: { distance: 31.5, target: new Vec3(0, 11.5, 0) },
