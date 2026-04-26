@@ -17,6 +17,10 @@
 - **姿态识别**：MediaPipe
 - **3D渲染**：Reze Engine (基于Three.js)
 
+## 第三方依赖
+
+本项目使用了 [Reze Engine](https://github.com/reze-engine/reze-engine) 作为3D渲染引擎，该引擎基于Three.js，用于MMD模型的加载和动画渲染。
+
 ## 快速开始
 
 ### 环境要求
